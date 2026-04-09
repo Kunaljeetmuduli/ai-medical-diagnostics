@@ -49,9 +49,3 @@ When a patient's case is submitted, multiple specialized AI agents run concurren
    *The application will automatically launch on `http://localhost:8501/`.*
 
 ---
-
-## 🔮 Future Roadmap
-
-- **Vision Modality**: Integration of vision-language models (VLMs) to process raw radiology scans and MRI results directly in the dashboard.
-- **Local Sandbox Execution**: Deploy smaller edge-native LLMs directly on-device using llama.cpp or Ollama for absolute privacy-compliant report processing.
-- **Dynamic EHR Integrations**: Secure fetching of Electronic Health Records via FHIR standards for automated context generation.
