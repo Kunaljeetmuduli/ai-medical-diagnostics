@@ -1,13 +1,17 @@
 import base64
 import hashlib
+import io
 import json
 import os
 import sqlite3
+import textwrap
 from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import streamlit as st
 from dotenv import load_dotenv
+from reportlab.lib.pagesizes import A4
+from reportlab.pdfgen import canvas
 
 def get_base64_of_bin_file(bin_file):
     if not os.path.exists(bin_file): return ""
@@ -365,94 +369,150 @@ html, body, [class*="css"] {
 
 .auth-panel {
     min-height: 75vh;
-    background: #ffffff;
+    background: linear-gradient(135deg, #ffffff 0%, #f8fafb 100%);
     border: none;
     border-radius: 0;
-    padding: 1rem 3rem;
+    padding: 2rem 3.5rem;
     display: flex;
     flex-direction: column;
     justify-content: center;
+    position: relative;
+}
+
+.auth-panel::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 40%;
+    height: 40%;
+    background: radial-gradient(circle at top right, rgba(56, 189, 248, 0.08) 0%, transparent 70%);
+    pointer-events: none;
 }
 
 .auth-panel-top {
-    margin-bottom: 2rem;
+    margin-bottom: 1.35rem;
+    position: relative;
+    z-index: 1;
+}
+
+.auth-panel-content {
+    min-height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 2.2rem 0;
 }
 
 .auth-tabs-note {
-    margin: 1.5rem 0 2rem 0;
-    font-size: 1rem;
-    color: #121212;
+    margin: 0.95rem 0 0.2rem 0;
+    font-size: 0.95rem;
+    color: #64748b;
+    text-align: center;
 }
 
 .auth-tabs-note a {
-    color: #4b9bdf;
+    color: #0ea5e9;
     text-decoration: none;
+    font-weight: 600;
+    transition: color 0.2s ease;
+}
+
+.auth-tabs-note a:hover {
+    color: #0284c7;
+    text-decoration: underline;
 }
 
 .auth-panel-title {
     margin: 0;
-    color: #121213;
-    font-size: 2.2rem;
-    font-weight: 500;
-    margin-bottom: 2.5rem;
+    color: #0f172a;
+    font-size: 3.3rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    letter-spacing: -0.02em;
 }
 
 .auth-panel-subtitle {
-    display: none;
+    display: block;
+    font-size: 1.28rem;
+    color: #64748b;
+    margin-bottom: 1.4rem;
+    font-weight: 400;
 }
 
-.auth-login-divider {
-    display: none;
+.auth-form-container {
+    position: relative;
+    z-index: 1;
+}
+
+.auth-input-group {
+    margin-bottom: 0.9rem;
 }
 
 .auth-social-label {
-    font-size: 1.1rem;
-    color: #121213;
+    font-size: 0.875rem;
+    color: #475569;
     margin-bottom: 0.5rem;
-    font-weight: 500;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    text-transform: uppercase;
 }
 
-.auth-social-row {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 0.8rem;
-    margin-bottom: 1.1rem;
-}
-
-.social-card {
-    background: #23222a;
+.auth-submit-btn {
+    width: 100%;
+    background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
     color: #ffffff;
+    border: none;
     border-radius: 12px;
-    padding: 0.9rem;
-    text-align: center;
-    font-size: 1.1rem;
-    font-weight: 400;
-    box-shadow: none;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.5rem;
+    padding: 0.95rem 1.5rem;
+    font-size: 1.05rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 12px rgba(14, 165, 233, 0.3);
+    margin-top: 1.5rem;
 }
 
-.social-card.light {
-    background: #23222a;
+.auth-submit-btn:hover {
+    background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+    box-shadow: 0 6px 20px rgba(14, 165, 233, 0.4);
+    transform: translateY(-2px);
+}
+
+.auth-submit-btn:active {
+    transform: translateY(0);
+}
+
+.support-section {
+    margin-top: 1.15rem;
+    padding-top: 1.1rem;
+    border-top: 1px solid #e2e8f0;
+    position: relative;
+    z-index: 1;
 }
 
 .support-label {
-    font-size: 1rem;
-    color: #121213;
-    margin-top: 3rem;
+    font-size: 0.875rem;
+    color: #64748b;
     margin-bottom: 0.8rem;
+    font-weight: 500;
 }
 
 .support-pill {
-    background: #f8f8f9;
-    border: none;
-    border-radius: 12px;
-    padding: 0.85rem 0.9rem;
+    background: #f1f5f9;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 0.85rem 1rem;
     text-align: center;
-    color: #121213;
-    font-size: 1.1rem;
+    color: #0f172a;
+    font-size: 1rem;
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+.support-pill:hover {
+    background: #e2e8f0;
+    border-color: #cbd5e1;
 }
 
 .glass-panel {
@@ -491,7 +551,7 @@ html, body, [class*="css"] {
 
 .history-meta {
     font-size: 0.85rem;
-    color: #4f7490;
+    color: #2f6285 !important;
 }
 
 .agent-badge {
@@ -499,18 +559,19 @@ html, body, [class*="css"] {
     padding: 0.28rem 0.78rem;
     border-radius: 999px;
     font-size: 0.75rem;
-    font-weight: 600;
+    font-weight: 700;
+    letter-spacing: 0.02em;
     margin-right: 0.3rem;
     margin-bottom: 0.3rem;
     border: 1px solid transparent;
     box-shadow: 0 5px 14px rgba(40, 126, 176, 0.12);
 }
 
-.urgency-low { background: #e6faef; color: #1f7a45; border-color: #b8e8cb; }
-.urgency-moderate { background: #fff8df; color: #8a6b12; border-color: #f2e1a1; }
-.urgency-high { background: #ffeceb; color: #9c2f2f; border-color: #f4b8b5; }
-.urgency-critical { background: #c52929; color: #fff4f4; border-color: #a41f1f; }
-.urgency-unknown { background: #edf5fa; color: #4a6a82; border-color: #d2e3ef; }
+.urgency-low { background: #15803d !important; color: #ffffff !important; border-color: #166534 !important; }
+.urgency-moderate { background: #a16207 !important; color: #ffffff !important; border-color: #854d0e !important; }
+.urgency-high { background: #b91c1c !important; color: #ffffff !important; border-color: #991b1b !important; }
+.urgency-critical { background: #7f1d1d !important; color: #ffffff !important; border-color: #5f1212 !important; }
+.urgency-unknown { background: #0e7490 !important; color: #ffffff !important; border-color: #155e75 !important; }
 
 .diagnosis-card {
     background: linear-gradient(155deg, rgba(255, 255, 255, 0.96) 0%, rgba(245, 251, 255, 0.96) 100%);
@@ -591,16 +652,67 @@ div[data-testid="stExpander"] {
     box-shadow: 0 8px 22px rgba(27, 115, 164, 0.08);
 }
 
+div[data-testid="stExpander"] summary {
+    background: #e6f4ff !important;
+    border: 1px solid #b9def6 !important;
+    border-radius: 9px !important;
+}
+
+div[data-testid="stExpander"] summary:hover {
+    background: #d9efff !important;
+    border-color: #9fd1f2 !important;
+}
+
+div[data-testid="stExpander"] summary,
+div[data-testid="stExpander"] summary p,
+div[data-testid="stExpander"] summary span,
+div[data-testid="stExpander"] summary button,
+div[data-testid="stExpander"] summary button p,
+div[data-testid="stExpander"] [data-testid="stMarkdownContainer"],
+div[data-testid="stExpander"] [data-testid="stMarkdownContainer"] p,
+div[data-testid="stExpander"] [data-testid="stMarkdownContainer"] li,
+div[data-testid="stExpander"] [data-testid="stText"],
+div[data-testid="stExpander"] [data-testid="stText"] * {
+    color: #0f172a !important;
+}
+
+div[data-testid="stExpander"] summary svg,
+div[data-testid="stExpander"] summary [data-testid="stExpanderToggleIcon"] {
+    color: #0b3550 !important;
+    fill: #0b3550 !important;
+}
+
+div[data-testid="stExpander"] [data-testid="stDownloadButton"] button {
+    background: #e0f2fe !important;
+    color: #0c4a6e !important;
+    border: 1px solid #7dd3fc !important;
+    font-weight: 700 !important;
+}
+
+div[data-testid="stExpander"] [data-testid="stDownloadButton"] button p,
+div[data-testid="stExpander"] [data-testid="stDownloadButton"] button span {
+    color: #0c4a6e !important;
+}
+
 div[data-testid="stTextInput"] input,
 div[data-testid="stTextArea"] textarea,
 div[data-testid="stSelectbox"] div[data-baseweb="select"] > div,
 div[data-testid="stFileUploader"] section {
-    background: rgba(255, 255, 255, 0.05) !important;
-    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    background: rgba(255, 255, 255, 0.08) !important;
+    border: 1px solid #e2e8f0 !important;
     border-radius: 12px !important;
-    color: #f1f5f9 !important;
-    box-shadow: inset 0 2px 4px rgba(0,0,0,0.1) !important;
-    font-size: 1.1rem !important;
+    color: #0f172a !important;
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.03) !important;
+    font-size: 1rem !important;
+    padding: 0.75rem 1rem !important;
+    transition: all 0.2s ease !important;
+}
+
+div[data-testid="stTextInput"] input:focus,
+div[data-testid="stTextArea"] textarea:focus {
+    border: 1px solid #0ea5e9 !important;
+    box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.1) !important;
+    outline: none !important;
 }
 
 div[data-testid="stForm"] {
@@ -611,13 +723,7 @@ div[data-testid="stForm"] {
 }
 
 div[data-testid="stForm"] > div {
-    gap: 1.5rem;
-}
-
-div[data-testid="stTextInput"] input:focus,
-div[data-testid="stTextArea"] textarea:focus {
-    border: none !important;
-    box-shadow: 0 0 0 1px #d4d4d8 !important;
+    gap: 0.8rem;
 }
 
 [data-testid="stTextInput"] label,
@@ -626,13 +732,17 @@ div[data-testid="stTextArea"] textarea:focus {
 [data-testid="stFileUploader"] label,
 [data-testid="stRadio"] label,
 [data-testid="stCheckbox"] label {
-    color: #121213 !important;
-    font-weight: 500 !important;
+    color: #475569 !important;
+    font-weight: 600 !important;
+    font-size: 0.875rem !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.01em !important;
+    margin-bottom: 0.5rem !important;
 }
 
 [data-testid="stTextInput"] input::placeholder,
 [data-testid="stTextArea"] textarea::placeholder {
-    color: #b0b0b0 !important;
+    color: #94a3b8 !important;
     opacity: 1 !important;
 }
 
@@ -663,6 +773,17 @@ div[data-testid="stTextArea"] textarea:focus {
     .auth-social-row,
     .hero-card-row {
         grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 1100px) {
+    .auth-panel-title {
+        font-size: 2.7rem;
+    }
+
+    .auth-panel-subtitle {
+        font-size: 1.14rem;
+        margin-bottom: 1.1rem;
     }
 }
 </style>
@@ -859,6 +980,110 @@ def suggest_specialists(report_text: str) -> tuple[list, dict]:
     return suggested, reasons
 
 
+def build_checkup_pdf_bytes(checkup: dict, checkup_index: int, timestamp: str) -> bytes:
+    buffer = io.BytesIO()
+    pdf = canvas.Canvas(buffer, pagesize=A4)
+    width, height = A4
+    left_margin = 46
+    right_margin = 46
+    top_margin = 42
+    bottom_margin = 42
+    y = height - top_margin
+    max_chars = 112
+
+    def ensure_space(lines_needed: int = 1) -> None:
+        nonlocal y
+        if y <= bottom_margin + (lines_needed * 14):
+            pdf.showPage()
+            y = height - top_margin
+
+    def add_line(text: str = "", font: str = "Helvetica", size: int = 10, gap: int = 14) -> None:
+        nonlocal y
+        ensure_space(1)
+        pdf.setFont(font, size)
+        pdf.drawString(left_margin, y, text)
+        y -= gap
+
+    def add_wrapped(text: str, font: str = "Helvetica", size: int = 10, gap: int = 14) -> None:
+        nonlocal y
+        lines = textwrap.wrap(text or "", width=max_chars) or [""]
+        ensure_space(len(lines))
+        pdf.setFont(font, size)
+        for line in lines:
+            pdf.drawString(left_margin, y, line)
+            y -= gap
+
+    patient = checkup.get("patient_name", "Unknown")
+    selected_agents = checkup.get("selected_agents", [])
+    result = checkup.get("result", {})
+    final_diag = result.get("final_diagnosis", {})
+    diagnoses = final_diag.get("diagnoses", [])
+    next_steps = final_diag.get("recommended_next_steps", [])
+    urgency = str(final_diag.get("overall_urgency", "unknown")).upper()
+    specialist_reports = result.get("specialist_reports", {})
+    source_report = checkup.get("input_report", "No report text available.")
+
+    add_line(f"PulseLens AI Checkup Report #{checkup_index}", font="Helvetica-Bold", size=14, gap=20)
+    add_line(f"Generated: {datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')}")
+    add_line(f"Checkup Time: {timestamp}")
+    add_line(f"Patient: {patient}")
+    add_wrapped(f"Specialists: {', '.join(selected_agents) if selected_agents else 'None'}")
+    add_line(f"Overall Urgency: {urgency}", font="Helvetica-Bold", size=11, gap=18)
+
+    add_line("Final Diagnoses", font="Helvetica-Bold", size=12, gap=16)
+    if diagnoses:
+        for i, item in enumerate(diagnoses, 1):
+            condition = item.get("condition", "-")
+            reasoning = item.get("reasoning", "-")
+            add_wrapped(f"{i}. {condition}", font="Helvetica-Bold")
+            add_wrapped(f"Reasoning: {reasoning}")
+            y -= 4
+    else:
+        add_line("No diagnoses available.")
+
+    y -= 4
+    add_line("Recommended Next Steps", font="Helvetica-Bold", size=12, gap=16)
+    if next_steps:
+        for i, step in enumerate(next_steps, 1):
+            add_wrapped(f"{i}. {step}")
+    else:
+        add_line("No recommended next steps available.")
+
+    y -= 6
+    add_line("Specialist Reports", font="Helvetica-Bold", size=12, gap=16)
+    if specialist_reports:
+        for specialist, report in specialist_reports.items():
+            add_wrapped(f"{specialist}", font="Helvetica-Bold")
+            add_wrapped(f"Urgency: {str(report.get('urgency', 'unknown')).upper()}")
+
+            conditions = report.get("possible_conditions", [])
+            tests = report.get("recommended_tests", [])
+            reasoning = report.get("reasoning", "-")
+
+            add_wrapped(f"Possible Conditions: {', '.join(conditions) if conditions else '-'}")
+            add_wrapped(f"Recommended Tests: {', '.join(tests) if tests else '-'}")
+            add_wrapped(f"Reasoning: {reasoning}")
+            y -= 4
+    else:
+        add_line("No specialist reports available.")
+
+    y -= 6
+    add_line("Source Report", font="Helvetica-Bold", size=12, gap=16)
+    for para in str(source_report).splitlines() or ["No report text available."]:
+        add_wrapped(para if para.strip() else " ")
+
+    if y <= bottom_margin + 20:
+        pdf.showPage()
+        y = height - top_margin
+
+    add_line("For research and educational purposes only.", size=9, gap=12)
+    add_line("Not intended for clinical use.", size=9, gap=12)
+
+    pdf.save()
+    buffer.seek(0)
+    return buffer.getvalue()
+
+
 def render_header() -> None:
     st.markdown('<p class="main-title">PulseLens AI</p>', unsafe_allow_html=True)
     st.markdown(
@@ -922,13 +1147,119 @@ def render_auth_page() -> None:
     display: flex;
     flex-direction: column;
     justify-content: center;
-    padding: 0 4rem !important;
+    padding: 2.8rem 3.1rem !important;
     height: auto;
     min-height: 80vh;
     background: rgba(255, 255, 255, 0.96) !important;
 }}
 [data-testid="column"]:nth-of-type(1) {{
     padding: 0 !important;
+}}
+
+/* Keep high contrast in the light auth panel regardless of global dark-theme overrides. */
+[data-testid="column"]:nth-of-type(2),
+[data-testid="column"]:nth-of-type(2) p,
+[data-testid="column"]:nth-of-type(2) span,
+[data-testid="column"]:nth-of-type(2) label,
+[data-testid="column"]:nth-of-type(2) div {{
+    color: #0f172a !important;
+}}
+
+[data-testid="column"]:nth-of-type(2) [data-testid="stAlert"] * {{
+    color: inherit !important;
+}}
+
+[data-testid="column"]:nth-of-type(2) [data-testid="stButton"] button {{
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    color: #0284c7 !important;
+    font-weight: 700 !important;
+    text-decoration: underline;
+    min-height: auto !important;
+    line-height: 1.2 !important;
+    padding: 0 !important;
+    margin: 0 auto 0.55rem auto !important;
+}}
+
+[data-testid="column"]:nth-of-type(2) [data-testid="stButton"] button:hover {{
+    color: #0369a1 !important;
+}}
+
+div[data-testid="stTextInput"] div[data-baseweb="input"],
+div[data-testid="stTextInput"] div[data-baseweb="base-input"],
+div[data-testid="stTextInput"] div[data-baseweb="input"] > div,
+div[data-testid="stTextInput"] div[data-baseweb="base-input"] > div {{
+    background: #0f172a !important;
+    border: 1px solid #334155 !important;
+    border-radius: 12px !important;
+    box-shadow: none !important;
+}}
+
+div[data-testid="stTextInput"] div[data-baseweb="input"] {{
+    border: 1px solid #334155 !important;
+    border-radius: 12px !important;
+    overflow: hidden !important;
+    box-shadow: none !important;
+}}
+
+div[data-testid="stTextInput"] div[data-baseweb="input"] > div,
+div[data-testid="stTextInput"] div[data-baseweb="base-input"] > div {{
+    border: none !important;
+    border-radius: 0 !important;
+}}
+
+div[data-testid="stTextInput"] input,
+div[data-testid="stTextInput"] input[type="text"],
+div[data-testid="stTextInput"] input[type="password"],
+div[data-baseweb="input"] input,
+div[data-baseweb="base-input"] input {{
+    background: #0f172a !important;
+    border: none !important;
+    outline: none !important;
+    box-shadow: none !important;
+    color: #ffffff !important;
+    -webkit-text-fill-color: #ffffff !important;
+    caret-color: #ffffff !important;
+    opacity: 1 !important;
+    font-weight: 600 !important;
+}}
+
+div[data-testid="stTextInput"] div[data-baseweb="input"] button,
+div[data-testid="stTextInput"] div[data-baseweb="base-input"] button {{
+    border: none !important;
+    box-shadow: none !important;
+    background: #0f172a !important;
+    color: #e2e8f0 !important;
+}}
+
+div[data-testid="InputInstructions"],
+div[data-testid="stTextInputInstructions"] {{
+    display: none !important;
+}}
+
+div[data-testid="stTextInput"] input::placeholder {{
+    color: #cbd5e1 !important;
+    -webkit-text-fill-color: #cbd5e1 !important;
+    opacity: 1 !important;
+}}
+
+div[data-testid="stTextInput"] input:-webkit-autofill,
+div[data-testid="stTextInput"] input:-webkit-autofill:hover,
+div[data-testid="stTextInput"] input:-webkit-autofill:focus {{
+    -webkit-text-fill-color: #ffffff !important;
+    box-shadow: 0 0 0 1000px #0f172a inset !important;
+}}
+
+@media (max-width: 920px) {{
+    [data-testid="column"]:nth-of-type(2),
+    [data-testid="column"]:nth-of-type(1) {{
+        min-height: unset;
+    }}
+
+    [data-testid="column"]:nth-of-type(2) {{
+        padding: 1.2rem 1.2rem 1.5rem 1.2rem !important;
+    }}
 }}
 </style>
 <div class="auth-hero">
@@ -966,23 +1297,31 @@ def render_auth_page() -> None:
         )
 
     with right:
+        st.markdown('<div class="auth-panel-content">', unsafe_allow_html=True)
         st.markdown('<div class="auth-panel-top">', unsafe_allow_html=True)
         if auth_mode == "Login":
-            st.markdown('<p class="auth-panel-title">Welcome!</p>', unsafe_allow_html=True)
+            st.markdown('<p class="auth-panel-title">Welcome Back!</p>', unsafe_allow_html=True)
+            st.markdown('<p class="auth-panel-subtitle">Enter your credentials to access your account</p>', unsafe_allow_html=True)
         else:
-            st.markdown('<p class="auth-panel-title">Welcome!</p>', unsafe_allow_html=True)
+            st.markdown('<p class="auth-panel-title">Create Account</p>', unsafe_allow_html=True)
+            st.markdown('<p class="auth-panel-subtitle">Sign up to start your medical diagnostic journey</p>', unsafe_allow_html=True)
+
+        st.markdown('</div>', unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
+        st.markdown('<div class="auth-form-container">', unsafe_allow_html=True)
 
         if auth_mode == "Login":
             with st.form("login_form", clear_on_submit=False):
-                st.markdown('<div class="auth-social-label">Login</div>', unsafe_allow_html=True)
-                login_username = st.text_input("", placeholder="Enter your login", label_visibility="collapsed")
-                st.markdown('<div class="auth-social-label" style="margin-top:10px">Password</div>', unsafe_allow_html=True)
-                login_password = st.text_input("", type="password", placeholder="Enter your password", label_visibility="collapsed")
+                st.markdown('<div class="auth-input-group">', unsafe_allow_html=True)
+                st.markdown('<div class="auth-social-label">Username</div>', unsafe_allow_html=True)
+                login_username = st.text_input("", placeholder="Enter your username", label_visibility="collapsed", key="login_user")
+                st.markdown('</div>', unsafe_allow_html=True)
                 
-                st.markdown(
-                    '<div class="auth-tabs-note">I don\'t have an account yet, <a href="?auth=signup">registration</a></div>',
-                    unsafe_allow_html=True,
-                )
+                st.markdown('<div class="auth-input-group">', unsafe_allow_html=True)
+                st.markdown('<div class="auth-social-label">Password</div>', unsafe_allow_html=True)
+                login_password = st.text_input("", type="password", placeholder="Enter your password", label_visibility="collapsed", key="login_pass")
+                st.markdown('</div>', unsafe_allow_html=True)
+                
                 login_submit = st.form_submit_button("Submit")
 
             if login_submit:
@@ -990,39 +1329,47 @@ def render_auth_page() -> None:
                     st.session_state.authenticated = True
                     st.session_state.username = login_username.strip().lower()
                     st.session_state.app_view = "dashboard"
-                    st.success("Login successful.")
+                    st.success("✅ Login successful!")
                     st.rerun()
                 else:
-                    st.error("Invalid username or password.")
+                    st.error("❌ Invalid username or password.")
 
+            st.markdown('<div class="auth-tabs-note">Don\'t have an account?</div>', unsafe_allow_html=True)
+            _, signup_cta_col, _ = st.columns([1, 1.2, 1])
+            with signup_cta_col:
+                if st.button("Sign up", key="switch_to_signup", use_container_width=True):
+                    st.query_params["auth"] = "signup"
+                    st.rerun()
 
         else:
             with st.form("signup_form", clear_on_submit=False):
-                st.markdown('<div class="auth-social-label">Login</div>', unsafe_allow_html=True)
-                signup_username = st.text_input("", placeholder="Enter your login", label_visibility="collapsed")
-                st.markdown('<div class="auth-social-label" style="margin-top:10px">Password</div>', unsafe_allow_html=True)
-                signup_password = st.text_input("", type="password", placeholder="Enter your password", label_visibility="collapsed")
-                st.markdown(
-                    '<div class="auth-tabs-note">Already have an account? <a href="?auth=login">login</a></div>',
-                    unsafe_allow_html=True,
-                )
+                st.markdown('<div class="auth-input-group">', unsafe_allow_html=True)
+                st.markdown('<div class="auth-social-label">Username</div>', unsafe_allow_html=True)
+                signup_username = st.text_input("", placeholder="Choose a username", label_visibility="collapsed", key="signup_user")
+                st.markdown('</div>', unsafe_allow_html=True)
+                
+                st.markdown('<div class="auth-input-group">', unsafe_allow_html=True)
+                st.markdown('<div class="auth-social-label">Password</div>', unsafe_allow_html=True)
+                signup_password = st.text_input("", type="password", placeholder="Create a password (min. 6 characters)", label_visibility="collapsed", key="signup_pass")
+                st.markdown('</div>', unsafe_allow_html=True)
+                
                 signup_submit = st.form_submit_button("Submit")
 
             if signup_submit:
                 ok, message = register_user(signup_username, signup_password)
                 if ok:
-                    st.success(message + " You can now login.")
+                    st.success(f"✅ {message} You can now login.")
                     st.query_params["auth"] = "login"
                     st.rerun()
                 else:
-                    st.error(message)
+                    st.error(f"❌ {message}")
 
-        st.markdown('<div class="support-label">For all questions:</div>', unsafe_allow_html=True)
-        st.markdown('<div class="support-pill">📞 +1 408 123-4567</div>', unsafe_allow_html=True)
+            st.markdown('<div class="auth-tabs-note">Already have an account?</div>', unsafe_allow_html=True)
+            if st.button("Sign in here", key="switch_to_login"):
+                st.query_params["auth"] = "login"
+                st.rerun()
+
         st.markdown('</div>', unsafe_allow_html=True)
-
-
-
 
 # --- App Shell After Login ---
 
@@ -1427,11 +1774,12 @@ def render_history() -> None:
             with st.expander("View Source Report", expanded=False):
                 st.text(checkup.get("input_report", "No report text available."))
 
+            checkup_pdf = build_checkup_pdf_bytes(checkup, idx, timestamp)
             st.download_button(
-                label="Download This Checkup JSON",
-                data=json.dumps(checkup.get("result", {}), indent=2),
-                file_name=f"checkup_{idx}.json",
-                mime="application/json",
+                label="Download Full Report (PDF)",
+                data=checkup_pdf,
+                file_name=f"checkup_{idx}.pdf",
+                mime="application/pdf",
                 key=f"download_{idx}",
             )
 
