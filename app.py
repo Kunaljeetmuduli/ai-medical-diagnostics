@@ -1276,7 +1276,7 @@ div[data-testid="stTextInput"] input:-webkit-autofill:focus {{
 </div>
 
 <div class="avatar-card avatar-ophthalmologist">
-<div class="heart-icon">🤍</div>
+<div class="heart-icon">�</div>
 <img src="data:image/png;base64,{ophthalmologist_b64}">
 <div class="avatar-info">
 <strong>Ophthalmologist</strong>
